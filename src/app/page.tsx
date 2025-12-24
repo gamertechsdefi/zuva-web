@@ -50,9 +50,9 @@ export default function Home() {
           </p>
         </section>
 
-        <section className="py-16 px-8">
+        <section className="py-16 px-8 md:px-32">
 
-          <div className="container mx-auto  py-8">
+          <div className="container mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="flex flex-col items-center text-center p-6 bg-gray-900 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
                 <div className="mb-4 text-yellow-400">
@@ -67,7 +67,7 @@ export default function Home() {
                   <Zap size={40} />
                 </div>
                 <h3 className="text-xl font-bold mb-2">Computationally Effective</h3>
-                <p className="text-yellow-400">Lightweight protocols that won't drain your battery</p>
+                <p className="text-gray-400">Lightweight protocols that won't drain your battery</p>
               </div>
 
               <div className="flex flex-col items-center text-center p-6 bg-gray-900 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
@@ -75,7 +75,7 @@ export default function Home() {
                   <Layout size={40} />
                 </div>
                 <h3 className="text-xl font-bold mb-2">User Friendly Interface</h3>
-                <p className="text-yellow-400">Intuitive design making crypto accessible to everyone</p>
+                <p className="text-gray-400">Intuitive design making crypto accessible to everyone</p>
               </div>
 
               <div className="flex flex-col items-center text-center p-6 bg-gray-900 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
