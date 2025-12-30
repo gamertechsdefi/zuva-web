@@ -27,7 +27,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    // Safety Timeout: Force stop loading after 8 seconds if Firebase hangs
+    timeoutId = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn("AuthContext: Safety timeout triggered. Force stopping loading.");
+          return false;
+        }
+        return prev;
+      });
+    }, 8000);
+
+    // 1. Listen for Auth State Changes
     const unsubscribe = auth.onIdTokenChanged(async (user) => {
+      console.log("AuthContext: onIdTokenChanged triggered. User:", user?.email);
       if (user) {
         setUser(user);
         const token = await user.getIdToken();
@@ -35,27 +50,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           maxAge: 30 * 24 * 60 * 60,
           path: "/",
         });
-        setLoading(false); 
+        setLoading(false); // User found, stop loading immediately
+        clearTimeout(timeoutId);
       } else {
         setUser(null);
         destroyCookie(null, "session");
-        setLoading(false); 
+        // Don't stop loading here yet! Wait for getRedirectResult.
+        // UNLESS we are sure there is no redirect pending? It's hard to know.
+        // We rely on the Timeout or getRedirectResult to clear this.
       }
     });
 
+    // 2. Check for Redirect Result (Handles the page reload after Google login)
     getRedirectResult(auth)
       .then((result) => {
+        console.log("AuthContext: getRedirectResult resolved. Result:", result);
+        // If no redirect calculation happened (result is null) AND no user, stop loading.
         if (!result && !auth.currentUser) {
+          console.log("AuthContext: No redirect result and no user. Stop loading.");
           setLoading(false);
+          clearTimeout(timeoutId);
         }
       })
       .catch((error) => {
-        console.error("Redirect Login Error:", error);
+        console.error("AuthContext: Redirect Login Error:", error);
         toast.error(error.message || "Login failed");
         setLoading(false);
+        clearTimeout(timeoutId);
       });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const signInWithGoogle = async () => {
