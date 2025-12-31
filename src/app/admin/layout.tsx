@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { AdminShell } from "@/components/admin/AdminShell";
 
 export default async function AdminLayout({
   children,
@@ -15,31 +16,28 @@ export default async function AdminLayout({
   }
 
   try {
-    console.log("AdminLayout: Verifying session token...");
+    // 1. Verify Token
     const decodedToken = await adminAuth.verifyIdToken(session);
     const email = decodedToken.email;
-    console.log(`AdminLayout: Token verified for email: ${email}`);
 
     if (!email) {
       console.error("AdminLayout: No email found in token");
       throw new Error("No email in token");
     }
 
-    console.log(`AdminLayout: Checking Firestore whitelist for: ${email}`);
+    // 2. Check Whitelist in Firestore
     const adminDoc = await adminDb.collection("admins").doc(email).get();
-    console.log(`AdminLayout: Whitelist result for ${email}: ${adminDoc.exists}`);
 
     if (!adminDoc.exists) {
       console.warn(`Unauthorized access attempt by: ${email}`);
       redirect("/login?error=unauthorized"); 
     }
 
+    // Access Granted - Render Responsive Shell
     return (
-      <div className="flex min-h-screen bg-gray-100">
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1 p-6">{children}</main>
-        </div>
-      </div>
+      <AdminShell>
+          {children}
+      </AdminShell>
     );
 
   } catch (error) {
