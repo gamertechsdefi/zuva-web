@@ -33,43 +33,47 @@ export function NewsForm({ initialData }: NewsFormProps) {
 
   const content = watch("content");
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // 1. Instant Preview
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
-    console.log("Preview set to:", objectUrl);
-
-    // TEMPORARY: Disabled automatic upload to fix preview issue first.
-    // We will enable Cloudinary next.
-    /*
-    try {
-      setLoading(true);
-      // 2. Background Upload
-      const url = await NewsService.uploadImage(file);
-      setValue("imageUrl", url);
-      // Optional: Update preview with remote URL when done, or keep blob
-      // setImagePreview(url); 
-      toast.success("Image uploaded!");
-    } catch (error: any) {
-      console.error(error);
-      toast.error("Upload failed: Check Storage Rules");
-    } finally {
-      setLoading(false);
-    }
-    */
+    setSelectedFile(file); // Store for later upload
+    // toast.success("Image selected");
   };
 
   const onSubmit = async (data: Partial<NewsArticle>) => {
     if (!user) return;
     setLoading(true);
-
+      
     try {
+      let finalImageUrl = data.imageUrl || initialData?.imageUrl;
+
+      // 1. Perform Upload if file selected
+      if (selectedFile) {
+          try {
+              finalImageUrl = await NewsService.uploadImage(selectedFile);
+          } catch (error) {
+              console.error(error);
+              toast.error("Image upload failed. Article not saved.");
+              setLoading(false);
+              return;
+          }
+      }
+
+      // Fallback if still no URL
+      if (!finalImageUrl) {
+          finalImageUrl = "https://placehold.co/800x600?text=No+Image";
+      }
+
       if (initialData?.id) {
         // Update
-        await NewsService.update(initialData.id, data);
+        // Update
+        await NewsService.update(initialData.id, { ...data, imageUrl: finalImageUrl });
         toast.success("Article updated!");
       } else {
         // Create
@@ -77,7 +81,7 @@ export function NewsForm({ initialData }: NewsFormProps) {
           title: data.title!,
           excerpt: data.excerpt!,
           content: data.content!,
-          imageUrl: data.imageUrl,
+          imageUrl: finalImageUrl,
           isPublished: data.isPublished || false,
           author: {
             email: user.email!,

@@ -7,12 +7,14 @@ import { format } from "date-fns";
 import toast from "react-hot-toast";
 
 import { AdminHeader } from "@/components/admin/Header";
+import { NewsDetailView } from "@/components/admin/NewsDetailView";
 import { NewsService, NewsArticle } from "@/services/news.service";
 
 export default function NewsListPage() {
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
 
   useEffect(() => {
     loadNews();
@@ -79,7 +81,8 @@ export default function NewsListPage() {
             {news.map((item) => (
               <div 
                 key={item.id} 
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
+                onClick={() => setSelectedArticle(item)}
+                className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col group"
               >
                 {/* Image Preview */}
                 <div className="h-40 bg-gray-100 relative">
@@ -140,6 +143,12 @@ export default function NewsListPage() {
           </div>
         )}
       </main>
+
+      {/* Detail View Overlay */}
+      <NewsDetailView 
+        article={selectedArticle} 
+        onClose={() => setSelectedArticle(null)} 
+      />
     </div>
   );
 }

@@ -29,14 +29,18 @@ export interface NewsArticle {
   createdAt: number;
 }
 
-const COLLECTION_NAME = "news";
+// Cloudinary Config (Pending Keys from User)
+// const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+// const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-export const NewsService = {
+export class NewsService {
+  private static collectionName = "news";
+
   // Get all articles (ordered by date)
-  getAll: async (): Promise<NewsArticle[]> => {
+  static async getAll(): Promise<NewsArticle[]> {
     try {
       const q = query(
-        collection(db, COLLECTION_NAME), 
+        collection(db, NewsService.collectionName), 
         orderBy("publishedAt", "desc")
       );
       const snapshot = await getDocs(q);
@@ -49,12 +53,12 @@ export const NewsService = {
       console.error("Error fetching news:", error);
       throw error;
     }
-  },
+  }
 
   // Get single article
-  getById: async (id: string): Promise<NewsArticle | null> => {
+  static async getById(id: string): Promise<NewsArticle | null> {
     try {
-      const docRef = doc(db, COLLECTION_NAME, id);
+      const docRef = doc(db, NewsService.collectionName, id);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -65,13 +69,13 @@ export const NewsService = {
       console.error("Error fetching article:", error);
       throw error;
     }
-  },
+  }
 
   // Create article
-  create: async (article: Omit<NewsArticle, "id" | "createdAt" | "publishedAt">) => {
+  static async create(article: Omit<NewsArticle, "id" | "createdAt" | "publishedAt">) {
     try {
       const now = Date.now();
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+      const docRef = await addDoc(collection(db, NewsService.collectionName), {
         ...article,
         createdAt: now,
         publishedAt: now, 
@@ -81,39 +85,56 @@ export const NewsService = {
       console.error("Error creating article:", error);
       throw error;
     }
-  },
+  }
 
   // Update article
-  update: async (id: string, data: Partial<NewsArticle>) => {
+  static async update(id: string, data: Partial<NewsArticle>) {
     try {
-      const docRef = doc(db, COLLECTION_NAME, id);
+      const docRef = doc(db, NewsService.collectionName, id);
       await updateDoc(docRef, data);
     } catch (error) {
       console.error("Error updating article:", error);
       throw error;
     }
-  },
+  }
 
   // Delete article
-  delete: async (id: string) => {
+  static async delete(id: string) {
     try {
-      const docRef = doc(db, COLLECTION_NAME, id);
+      const docRef = doc(db, NewsService.collectionName, id);
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting article:", error);
       throw error;
     }
-  },
+  }
 
-  // Upload Image
-  uploadImage: async (file: File): Promise<string> => {
+  // CHANGED: Transitioning to Cloudinary
+  static async uploadImage(file: File): Promise<string> {
+    // Cloudinary Logic
+    if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME) {
+       throw new Error("Missing Cloudinary Configuration");
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "unsigned_preset");
+
     try {
-      const storageRef = ref(storage, `news/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      return await getDownloadURL(snapshot.ref);
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Cloudinary Error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.secure_url;
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error("Cloudinary Upload Failed:", error);
       throw error;
     }
   }
-};
+}
