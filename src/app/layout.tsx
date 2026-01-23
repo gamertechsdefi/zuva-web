@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
+import { Toaster } from "react-hot-toast";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -19,11 +21,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${manrope.variable} antialiased`}
       >
-        {children}
+        <AuthProvider>
+          <Toaster position="top-right" />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
