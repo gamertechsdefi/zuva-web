@@ -8,6 +8,7 @@ import { Loader2, Upload, Image as ImageIcon, Layout, Eye } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { NewsArticle, NewsService } from "@/services/news.service";
+import { sendNewsNotificationAction } from "@/app/actions/notification.actions";
 import { useAuth } from "@/context/AuthContext";
 import { clsx } from "clsx";
 
@@ -71,13 +72,38 @@ export function NewsForm({ initialData }: NewsFormProps) {
       }
 
       if (initialData?.id) {
-        // Update
-        // Update
+        // Update existing article
+        const wasPublished = initialData.isPublished;
+        const isNowPublished = data.isPublished;
+        
         await NewsService.update(initialData.id, { ...data, imageUrl: finalImageUrl });
-        toast.success("Article updated!");
+        
+        // Send notification if article is being published (wasn't published before, but is now)
+        if (!wasPublished && isNowPublished) {
+          try {
+            const result = await sendNewsNotificationAction({
+              newsId: initialData.id,
+              title: data.title!,
+              excerpt: data.excerpt,
+              imageUrl: finalImageUrl,
+            });
+
+            if (result.success) {
+              toast.success("Article published and notification sent!");
+            } else {
+              console.error("Notification failed:", result.error);
+              toast.success("Article published (notification failed - check logs)");
+            }
+          } catch (error) {
+            console.error('Failed to send notification:', error);
+            toast.success("Article published (notification error)");
+          }
+        } else {
+          toast.success("Article updated!");
+        }
       } else {
-        // Create
-        await NewsService.create({
+        // Create new article
+        const newArticleId = await NewsService.create({
           title: data.title!,
           excerpt: data.excerpt!,
           content: data.content!,
@@ -89,7 +115,30 @@ export function NewsForm({ initialData }: NewsFormProps) {
             photoURL: user.photoURL || undefined,
           }
         });
-        toast.success("Article published!");
+        
+        // Send notification if article is published
+        if (data.isPublished) {
+          try {
+            const result = await sendNewsNotificationAction({
+              newsId: newArticleId,
+              title: data.title!,
+              excerpt: data.excerpt,
+              imageUrl: finalImageUrl,
+            });
+
+            if (result.success) {
+              toast.success("Article published and notification sent!");
+            } else {
+              console.error("Notification failed:", result.error);
+              toast.success("Article published (notification failed - check logs)");
+            }
+          } catch (error) {
+            console.error('Failed to send notification:', error);
+            toast.success("Article published (notification error)");
+          }
+        } else {
+          toast.success("Draft saved!");
+        }
       }
       router.push("/admin/news");
     } catch (error) {
